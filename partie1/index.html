@@ -1,0 +1,38 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon propre visualisateur de données géospatiales avec Openlayers</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./lib/v6.5.0-dist/ol.css">
+
+</head>
+<body>
+    <div class="navbar">
+        <div class="navbar-logo">
+        </div>
+        <h1>Mon propre visualisateur de données géospatiales avec Openlayers</h1>
+        <!-- You can add more navbar items here -->
+      </div>
+
+
+<div id="js-map"  class="map"></div>
+
+<div class="legend">
+    <div class="legend-item">
+      <div class="legend-symbol" style="background: #0081f3;"></div>
+      <div>Province</div>
+    </div>
+    <div class="legend-item">
+      <div class="legend-symbol" style="background:white;border-color: red;"></div>
+      <div>Région</div>
+    </div>
+    <div class="legend-item">
+        <div class="legend-symbol" style="background:gray;"></div>
+        <div>Communes</div>
+      </div>  </div>
+
+    <script  src="./lib/v6.5.0-dist/ol.js"></script>
+    <script src="main.js" ></script>
+</body>
+</html>
