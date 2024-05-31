@@ -1,0 +1,429 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Use correct character set. -->
+    <meta charset="utf-8" />
+    <!-- Tell IE to use the latest, best version. -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <!-- Make the application on mobile take up the full browser screen and disable user scaling. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no" />
+
+    <script src="http://localhost:8080/3d\libs\Cesium-1.117\Build\Cesium\Cesium.js"></script>
+    <script src="http://localhost:8080/3d\libs\Cesium-1.117\Apps\Sandcastle\Sandcastle-header.js"></script>
+    <link rel="stylesheet" href="http://localhost:8080/3d/libs/v6.5.0-dist/ol.css">
+    <script  src="http://localhost:8080/3d/libs/v6.5.0-dist/ol.js"></script>
+    <title>Cesium Viewer</title>
+</head>
+<style>
+    @import url(http://localhost:8080/3d/libs/Cesium-1.117/Apps/Sandcastle/CesiumSandcastle.css);
+
+    @import url(http://localhost:8080/3d/libs/Cesium-1.117/Apps/Sandcastle/templates/bucket.css);
+</style>
+
+<body>
+    <div id="cesiumContainer" ></div>
+    <div id="loadingOverlay">
+        <h1>Loading...</h1>
+    </div>
+    <div id="toolbar"></div>
+   	<script type="text/javascript">
+	    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5NzE4OWU4MS0wMGU5LTRhZTYtYmZjNC1kNGI3YjNlOTg1NjgiLCJpZCI6MjE2NDIyLCJpYXQiOjE3MTYxOTY4NDF9.8A-RhBQ-WMSBH-dULZS9MfYQgPNlFGOE6BYMHexTt9E';
+
+ var viewer = new Cesium.Viewer("cesiumContainer",{
+                  Geocoder: false,
+                  Animation: true,
+                  CreditsDisplay: false,
+                  Timeline: false,
+                  FullscreenButton: false
+ });
+viewer.scene.primitives.add(Cesium.createOsmBuildings());
+// Add a WMS imagery layer
+var imageryLayers = viewer.imageryLayers;
+imageryLayers.addImageryProvider(
+  new Cesium.WebMapServiceImageryProvider({
+    url:"http://localhost:8080/geoserver/wms",
+    layers: "SIG2:Communes",
+    parameters: {
+      transparent: true,
+      format: "image/png",
+    },
+  })
+);
+imageryLayers.addImageryProvider(
+    new Cesium.WebMapServiceImageryProvider({
+        url: "http://localhost:8080/geoserver/wms",
+        layers: "SIG2:CASA_communes",
+        parameters: {
+            transparent: true,
+            format: "image/png",
+        },
+    })
+);
+
+// Start off looking at casablanca.
+
+viewer.camera.setView({
+    destination: Cesium.Rectangle.fromDegrees(
+        -7.69, // longitude ouest (west longitude)
+        33.4731, // latitude sud (south latitude)
+        -7.4898, // longitude est (east longitude)
+        33.6731  // latitude nord (north latitude)
+    )
+});
+/*
+// Start off looking at USA.
+viewer.camera.setView({
+    destination: Cesium.Rectangle.fromDegrees(
+        -125.77,
+        49.83,
+        -62.00,
+        23.00
+    ),
+});
+*/
+Sandcastle.addToolbarMenu(
+    [{
+            text: "Select Layer",
+            onselect: function() {
+
+            }
+        },
+        {
+            text: "Provinces de Maroc",
+            onselect: function() {
+
+                viewer.dataSources.add(
+                    Cesium.GeoJsonDataSource.load(
+                        "http://localhost:8080/geoserver/SIG2/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=SIG2%3AProvinces&outputFormat=application%2Fjson"                    )
+                );
+                /* viewer.camera.lookAt(
+   Cesium.Cartesian3.fromDegrees(-98.0, 40.0),
+    new Cesium.Cartesian3(0.0, -4790000.0, 3930000.0)
+  );*/
+                var rectangle = Cesium.Rectangle.fromDegrees(-126.6, 21.76, -65.44, 52.64);
+
+                viewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(-97.98, 18.55, 4300000),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0),
+                        pitch: Cesium.Math.toRadians(-65.0),
+                        roll: 0.0,
+                    },
+                });
+
+            },
+        },
+
+        {
+            text: "Communes Maroc",
+            onselect: function() {
+                Cesium.Math.setRandomNumberSeed(0);
+                var usa = Cesium.GeoJsonDataSource.load(
+                   "http://localhost:8080/geoserver/SIG2/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=SIG2%3ARegions&outputFormat=application%2Fjson"               
+                 );
+
+                 promise.then(function(dataSource) {
+                        viewer.dataSources.add(dataSource);
+
+                        //Get the array of entities
+                        var entities = dataSource.entities.values;
+
+                        var colorHash = {};
+                        for (var i = 0; i < entities.length; i++) {
+                            //For each entity, create a random color based on the state name.
+                            //Some states have multiple entities, so we store the color in a
+                            //hash so that we use the same color for the entire state.
+                            var entity = entities[i];
+                            var name = entity.name;
+                            var color = colorHash[name];
+                            if (!color) {
+                                color = Cesium.Color.fromRandom({
+                                    alpha: 1.0,
+                                });
+                                colorHash[name] = color;
+                            }
+
+                            //Set the polygon material to our random color.
+                            entity.polygon.material = color;
+                            //Remove the outlines.
+                            entity.polygon.outline = false;
+
+                            //Extrude the polygon based on the state's population.  Each entity
+                            //stores the properties for the GeoJSON feature it was created from
+                            //Since the population is a huge number, we divide by 50.
+                            entity.polygon.extrudedHeight =
+                                entity.properties.PERSONS / 50.0;
+                        }
+                    })
+                    .otherwise(function(error) {
+                        //Display any errrors encountered while loading.
+                        window.alert(error);
+                    });
+
+                var rectangle = Cesium.Rectangle.fromDegrees(-126.6, 21.76, -65.44, 52.64);
+
+                viewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(-97.98, 18.55, 4300000),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0),
+                        pitch: Cesium.Math.toRadians(-65.0),
+                        roll: 0.0,
+                    },
+					easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
+                    duration: 5
+                });
+
+
+            }
+        },
+        {
+            text: "Batiment",
+            onselect: function() {
+                Cesium.Math.setRandomNumberSeed(0);
+                var promise = Cesium.GeoJsonDataSource.load(
+                    "Batiment.geojson"
+                );
+                promise
+                    .then(function(dataSource) {
+                        viewer.dataSources.add(dataSource);
+
+                        //Get the array of entities
+                        var entities = dataSource.entities.values;
+
+                        var colorHash = {};
+                        for (var i = 0; i < entities.length; i++) {
+                            //For each entity, create a random color based on the state name.
+                            //Some states have multiple entities, so we store the color in a
+                            //hash so that we use the same color for the entire state.
+                            var entity = entities[i];
+                            var name = entity.id;
+                            var color = colorHash[name];
+                            if (!color) {
+                                color = Cesium.Color.fromRandom({
+                                    alpha: 1.0,
+                                });
+                                colorHash[name] = color;
+                            }
+
+                            //Set the polygon material to our random color.
+                            entity.polygon.material = color;
+                            //Remove the outlines.
+                            entity.polygon.outline = false;
+
+                            //Extrude the polygon based on the state's population.  Each entity
+                            //stores the properties for the GeoJSON feature it was created from
+                            //Since the population is a huge number, we divide by 50.
+                            entity.polygon.extrudedHeight =
+                                entity.properties.height;
+                        }
+                    })
+                    .otherwise(function(error) {
+                        //Display any errrors encountered while loading.
+                        window.alert(error);
+                    });
+
+                /*	viewer.camera.lookAt(
+                    Cesium.Cartesian3.fromDegrees(77.369,28.6321),
+                    new Cesium.Cartesian3(0.0, -1000, 1500)
+                  );*/
+                var rectangle = Cesium.Rectangle.fromDegrees(77.365, 28.628, 77.3739, 28.636);
+
+                viewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(77.37021, 28.61397, 1500.0),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0),
+                        pitch: Cesium.Math.toRadians(-35.0),
+                        roll: 0.0,
+                    },
+					easingFunction: Cesium.EasingFunction.QUADRATIC_IN_OUT,
+                    duration: 5
+                });
+
+
+
+            }
+        },
+        {
+            text: "India",
+            onselect: function() {
+                Cesium.Math.setRandomNumberSeed(0);
+                var promise = Cesium.GeoJsonDataSource.load(
+                    "http://localhost:8080/geoserver/SIG2/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=SIG2%3AProvinces&outputFormat=application%2Fjson"                   
+                );
+                promise.then(function(dataSource) {
+                        viewer.dataSources.add(dataSource);
+
+                        //Get the array of entities
+                        var entities = dataSource.entities.values;
+
+                        var colorHash = {};
+                        for (var i = 0; i < entities.length; i++) {
+                            //For each entity, create a random color based on the state name.
+                            //Some states have multiple entities, so we store the color in a
+                            //hash so that we use the same color for the entire state.
+                            var entity = entities[i];
+                            var name = entity.name;
+                            var color = colorHash[name];
+                            if (!color) {
+                                color = Cesium.Color.fromRandom({
+                                    alpha: 1.0,
+                                });
+                                colorHash[name] = color;
+                            }
+
+                            //Set the polygon material to our random color.
+                            entity.polygon.material = color;
+                            //Remove the outlines.
+                            entity.polygon.outline = false;
+
+                            //Extrude the polygon based on the state's population.  Each entity
+                            //stores the properties for the GeoJSON feature it was created from
+                            //Since the population is a huge number, we divide by 50.
+                            entity.polygon.extrudedHeight =
+                                entity.properties.gid * 5000;
+                        }
+                    })
+                    .otherwise(function(error) {
+                        //Display any errrors encountered while loading.
+                        window.alert(error);
+                    });
+
+                /*		viewer.camera.lookAt(
+                    Cesium.Cartesian3.fromDegrees(82.0,26.0),
+                    new Cesium.Cartesian3(0.0, -4790000.0, 3930000.0)
+                  );*/
+                var rectangle = Cesium.Rectangle.fromDegrees(77.365, 28.628, 77.3739, 28.636);
+
+                viewer.camera.flyTo({
+                    destination: Cesium.Cartesian3.fromDegrees(78.59, 3.16, 4930000.0),
+                    orientation: {
+                        heading: Cesium.Math.toRadians(0),
+                        pitch: Cesium.Math.toRadians(-65.0),
+                        roll: 0.0,
+                    },
+                });
+
+
+
+
+            }
+        },
+
+        {
+            text: "Remove All",
+            onselect: function() {
+                viewer.dataSources.removeAll();
+                viewer.clock.clockRange = Cesium.ClockRange.UNBOUNDED;
+                viewer.clock.clockStep = Cesium.ClockStep.SYSTEM_CLOCK;
+            }
+        }
+
+
+    ],
+    "toolbar"
+);
+
+Sandcastle.reset = function() {
+    viewer.dataSources.removeAll();
+    viewer.clock.clockRange = Cesium.ClockRange.UNBOUNDED;
+    viewer.clock.clockStep = Cesium.ClockStep.SYSTEM_CLOCK;
+};
+
+
+
+	</script>
+<style>
+    html, body, #cesiumContainer {
+            width: 95%;
+            height: 95%;
+            margin: 20px;
+            padding: 0;
+            overflow: hidden;
+        }
+#js-map {
+    margin: 10px;
+    margin-left: 15%;
+    width: 1080px;
+    height: 560px;
+}
+
+
+
+.navbar {
+    width: 100%;
+    background-color: #333;
+    overflow: hidden;
+  }
+
+  .navbar h1 {
+    float: left;
+    display: block;
+    color: #f2f2f2;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    margin-left: 10px;
+    margin-top: 14px;
+
+  }
+
+  .navbar-logo {
+    margin-left: 10px;
+    margin-right: 10px;
+
+    float: left;
+    width: 100px; /* Adjust the size of the logo */
+    height: 100px;
+    background: url('img/ehtp.couleur.png') no-repeat;
+    background-size: cover;
+  }
+  .legend {
+    position: absolute;
+    top: 140px;
+    left: 10px;
+    background: white;
+    padding: 10px;
+    border: 1px solid #999;
+    border-radius: 5px;
+    z-index: 100;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+  .legend-symbol {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+    border: 1px solid #999;
+  }
+
+  .custom-mouse-position {
+    top: 10px;
+    left: 10%;
+    position: absolute;
+    background: rgba(255,255,255,0.8);
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #ddd;
+  }
+  
+</style>
+
+  </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
